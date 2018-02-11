@@ -1,4 +1,4 @@
-# These are the dependecies. The bot depends on these to function, hence the name. Please do not change these unless your adding to them, because they can break the bot.
+# CueTheIntroMusic bot by Tristan Basil. Created from https://github.com/Habchy/BasicBot
 import discord
 import asyncio
 from discord.ext.commands import Bot
@@ -6,8 +6,6 @@ from discord.ext import commands
 import platform
 import opuslib
 import glob
-
-#224698254145617920
 
 #global vars to hold various states of the bot
 server = None
@@ -17,10 +15,6 @@ botID = None
 player = None
 #holds the index in the file that the user entries start
 indexListBegin = -1
-
-#sometimes, you just want it to stfu
-stfu = False
-
 #list containing list of usernames, their configured mp3s, and their offset position in the file.
 configuredUsers = list()
 #list containing mp3's in the current directory
@@ -50,7 +44,6 @@ except:
 client = Bot(description="CueTheIntroMusic bot by Immaculato#9416", command_prefix="-", pm_help = True)
 
 # This is what happens everytime the bot launches. In this case, it prints information like server count, user count the bot is connected to, and the bot id in the console.
-# Do not mess with it because the bot can break, if you wish to do so, please consult me or someone trusted.
 @client.event
 async def on_ready():
     print('Logged in as '+client.user.name+' (ID:'+client.user.id+') | Connected to '+str(len(client.servers))+' servers | Connected to '+str(len(set(client.get_all_members())))+' users')
@@ -115,7 +108,7 @@ async def on_message(message):
 
 
 
-@client.command(help = 'Usage -stfu: makes me stfu (leave a channel)')
+@client.command(help = 'Usage: -stfu: makes me stfu (leave a channel)')
 async def stfu(*args):
     await voice.disconnect()
     await client.say(':zipper_mouth: FeelsBadMan')
@@ -155,16 +148,5 @@ def rewrite_file():
     for user in configuredUsers:
         file.write('\n'+user[0]+','+user[1])
     file.close()
-
-# After you have modified the code, feel free to delete the line above so it does not keep popping up everytime you initiate the ping commmand.
     
 client.run(botID)
-
-# Basic Bot was created by Habchy#1665
-# Please join this Discord server if you need help: https://discord.gg/FNNNgqb
-# Please modify the parts of the code where it asks you to. Example: The Prefix or The Bot Token
-# This is by no means a full bot, it's more of a starter to show you what the python language can do in Discord.
-# Thank you for using this and don't forget to star my repo on GitHub! [Repo Link: https://github.com/Habchy/BasicBot]
-
-# The help command is currently set to be not be Direct Messaged.
-# If you would like to change that, change "pm_help = False" to "pm_help = True" on line 9.

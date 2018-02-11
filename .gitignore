@@ -1,2 +1,3 @@
 #ignore the config file, it contains our bot id
 config.txt
+.DS_Store
