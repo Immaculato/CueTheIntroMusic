@@ -1,2 +1,2 @@
 # CueTheIntroMusic
-A discord app that plays mp3s when joining the channel.
+A discord bot that plays a chosen MP3 file for the user when they join the channel.
