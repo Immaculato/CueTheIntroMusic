@@ -6,10 +6,22 @@ from discord.ext import commands
 import platform
 import opuslib
 
-global server
-global voice
-global file
-global botID
+#224698254145617920
+
+#global vars to hold various states of the bot
+server = None
+voice = None
+file = None
+botID = None
+player = None
+#holds the index in the file that the user entries start
+indexListBegin = -1
+
+#sometimes, you just want it to stfu
+stfu = False
+
+#list containing list of usernames, their configured mp3s, and their offset position in the file.
+configuredUsers = list()
 
 #for voice transmission
 print('opus library loaded:',discord.opus.is_loaded())
@@ -17,14 +29,20 @@ print('opus library loaded:',discord.opus.is_loaded())
 #load config/save info from file
 file = None
 try:
-    file = open('config.txt', "r")
+    file = open('config.txt', "r+")
     botID = file.readline().rstrip()
+    indexListBegin = len(botID)
+    for line in file:
+    	parsedLine = line.rstrip().split(',')
+    	configuredUsers.append(parsedLine)
+    	print(parsedLine)
+
 except:
     print('config.txt not found')
     exit(-1)
 
 # Here you can modify the bot's prefix and description and wether it sends help in direct messages or not.
-client = Bot(description="CueTheIntroMusic bot by Tristan", command_prefix="-", pm_help = True)
+client = Bot(description="CueTheIntroMusic bot by Immaculato#9416", command_prefix="-", pm_help = True)
 
 # This is what happens everytime the bot launches. In this case, it prints information like server count, user count the bot is connected to, and the bot id in the console.
 # Do not mess with it because the bot can break, if you wish to do so, please consult me or someone trusted.
@@ -37,37 +55,65 @@ async def on_ready():
 	print('Use this link to invite {}:'.format(client.user.name))
 	print('https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8'.format(client.user.id))
 	print('--------')
-	print('Support Discord Server: https://discord.gg/FNNNgqb')
-	print('Github Link: https://github.com/Habchy/BasicBot')
+	print('Github Link: https://github.com/Immaculato/CueTheIntroMusic')
 	print('--------')
-	print('You are running BasicBot v2.1') #Do not change this. This will really help us support you, if you need support.
-	print('Created by Habchy#1665')
 	for clientServer in client.servers:
 		if clientServer.name == 'cool kids only':
 			global server
 			server = clientServer
 
+	return await client.change_presence(game=discord.Game(name='Some sick ass intro music'))
+
+@client.event
+async def on_voice_state_update(memberBefore, memberAfter):
+	#if the bot is in a channel, and a user joined that channel,
+	if (voice != None and voice.channel.name == memberAfter.voice.voice_channel.name):
+		#look for the user in the configured list. if they exist, play their intro music!
+		for i in range(len(configuredUsers)):
+			if memberBefore.id == configuredUsers[i][0]:
+				global player
+				#if the player has been set by a joining user before, stop it and queue up the new song.
+				if player != None:
+					player.stop()
+					player = None
+				player = voice.create_ffmpeg_player(configuredUsers[i][1])
+				#don't blow out everyone's eardrums
+				player.volume = 0.25
+				player.start()
+
+#tricky way to get the user in a public message and spoof a command.
+@client.event
+async def on_message(message):
+    parsedMessage = message.content.split(' ')
+    #if we got the setmusic command, look for the user in the configured users list.
+    if (len(parsedMessage) == 2 and parsedMessage[0] == '-set_music'):
+    	userFound = False
+    	for i in range(len(configuredUsers)):
+    		#if the user exists in the list, change their mp3.
+    		if message.author.id == configuredUsers[i][0]:
+    			configuredUsers[i][1] = parsedMessage[1]
+    			userFound = True
+    	#if we couldn't find the user in the list, add a new entry for them.
+    	if not userFound:
+    		configuredUsers.append(list([message.author.id, parsedMessage[1]]))
+    	#rewrite the config file
+    	rewrite_file()
+    			
+    #yanked this line from the source @ https://github.com/Rapptz/discord.py/blob/async/discord/ext/commands/bot.py
+    else:
+    	await client.process_commands(message)
 
 
-#myServer = client.servers[0]
-	return await client.change_presence(game=discord.Game(name='Some sick ass intro music')) #This is buggy, let us know if it doesn't work.
 
-# This is a basic example of a call and response command. You tell it do "this" and it does it.
-@client.command()
-async def ping(*args):
+@client.command(help = 'Usage -stfu: makes me stfu (leave a channel)')
+async def stfu(*args):
+	await voice.disconnect()
+	await client.say(':zipper_mouth: FeelsBadMan')
 
-	await client.say(":ping_pong: Pong!")
-	await asyncio.sleep(3)
-
-@client.command()
-async def get_args(*args):
-	for a in args:
-		await client.say(a)
-
-@client.command()
+@client.command(help = 'Usage: -cue_the_music [voice channel name]: This will summon me to a voice channel.')
 async def cue_the_music(*args):
 	if len(args) != 1:
-		client.say('Include a voice channel name pls')
+		await client.say('Include a voice channel name pls')
 		return
 
 	for channel in server.channels:	
@@ -77,13 +123,24 @@ async def cue_the_music(*args):
 			await client.say('You have summoned me')
 			return
 
-	client.say('Couldn\'t find that channel')
+	await client.say('Couldn\'t find that channel')
 	return
 
-@client.command()
-async def andHisNameIs(*args):
-	player = voice.create_ffmpeg_player('johncena.mp3')
-	player.start()
+#doesn't actually set the music, is a placeholder. The actual logic exists in on_message(message) above.
+@client.command(help = 'Usage: -set_music [mp3 filename]: This will set the intro music for the user. User -music_choices to see possible mp3 filenames.')
+async def set_music(*args):
+    return
+
+@client.command(help = 'Usage: -music_choices: This will print the mp3 options you can choose from.')
+async def music_choices(*args):
+	await client.say('in work')
+
+def rewrite_file():
+	file.seek(indexListBegin)
+	file.truncate()
+	for user in configuredUsers:
+		file.write('\n'+user[0]+','+user[1])
+
 # After you have modified the code, feel free to delete the line above so it does not keep popping up everytime you initiate the ping commmand.
 	
 client.run(botID)
